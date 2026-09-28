@@ -181,3 +181,211 @@ def update_score(current_score: int, outcome: str, attempt_number: int) -> int:
         return max(current_score - 5, 0)
 
     return current_score
+
+
+# ---------------------------------------------------------------------------
+# Feature: difficulty-tiered hints (Stretch Challenge 2)
+# ---------------------------------------------------------------------------
+#
+# Easy gives the player everything: direction, how close they are, and the
+# range the answer must now sit in. Normal gives direction only. Hard gives a
+# sarcastic taunt that appears to help with nothing -- but the first letter of
+# each word spells the direction. The joke is that Hard's hint is the most
+# informative of the three if you actually read it.
+
+HINT_MODES = {"Easy": "generous", "Normal": "partial", "Hard": "troll"}
+
+# Each taunt's initials spell its direction. test_troll_hints_encode_the
+# _direction decodes every one of these, so a typo cannot ship silently.
+TROLL_HINTS = {
+    "Too High": [
+        "Laughably Off. Wildly Extra, Really.",
+        "Legends Often Whiff Entire Rounds.",
+        "Look, Optimism Won't Erase Reality.",
+    ],
+    "Too Low": [
+        "Hmm. Interesting. Genuinely Hilarious Effort, Rookie.",
+        "Historically, Intelligent Guessers Have Educated Reflexes.",
+        "Hopeless? Indeed. Great Hustle, Extremely Restrained.",
+    ],
+}
+
+PROXIMITY_BANDS = (
+    (0.02, "boiling"),
+    (0.05, "hot"),
+    (0.12, "warm"),
+    (0.25, "cool"),
+)
+
+PROXIMITY_LABELS = {
+    "boiling": "BOILING -- you are almost on it",
+    "hot": "HOT",
+    "warm": "WARM",
+    "cool": "COOL",
+    "cold": "ICE COLD",
+}
+
+
+def acrostic(message: str) -> str:
+    """Return the initials of every word in a message, uppercased.
+
+    Args:
+        message: Any sentence, punctuation included.
+
+    Returns:
+        The first letter of each whitespace-separated word, e.g.
+        ``"Legends Often Whiff Entire Rounds."`` becomes ``"LOWER"``.
+
+    This is the decoder for the Hard-difficulty troll hints, and exists as a
+    real function rather than a comment so the tests can verify that every
+    taunt still spells what it is supposed to spell.
+    """
+    return "".join(word[0] for word in message.split() if word).upper()
+
+
+def proximity_band(guess: int, secret: int, low: int, high: int) -> str:
+    """Describe how close a guess is, as a fraction of the whole range.
+
+    Args:
+        guess: The player's guess.
+        secret: The number being guessed.
+        low: Lowest possible secret, inclusive.
+        high: Highest possible secret, inclusive.
+
+    Returns:
+        One of ``"boiling"``, ``"hot"``, ``"warm"``, ``"cool"`` or ``"cold"``.
+
+    Measuring distance as a fraction of the range keeps the bands fair across
+    difficulties: being 5 away means something very different in a 1-20 game
+    than in a 1-100 one.
+    """
+    span = max(high - low, 1)
+    ratio = abs(guess - secret) / span
+    for threshold, name in PROXIMITY_BANDS:
+        if ratio <= threshold:
+            return name
+    return "cold"
+
+
+def narrowed_range(guess: int, outcome: str, low: int, high: int) -> tuple[int, int]:
+    """Return the range the answer must fall in after a guess.
+
+    Args:
+        guess: The guess just made.
+        outcome: ``"Too High"`` or ``"Too Low"``.
+        low: Current lower bound, inclusive.
+        high: Current upper bound, inclusive.
+
+    Returns:
+        The tightened ``(low, high)`` bounds, never inverted.
+    """
+    if outcome == "Too High":
+        return low, max(low, guess - 1)
+    if outcome == "Too Low":
+        return min(high, guess + 1), high
+    return low, high
+
+
+def hint_for(difficulty, outcome, guess, secret, low, high, attempt_number=1):
+    """Build the hint shown to the player, scaled to the difficulty.
+
+    Args:
+        difficulty: ``"Easy"``, ``"Normal"`` or ``"Hard"``.
+        outcome: ``"Win"``, ``"Too High"`` or ``"Too Low"``.
+        guess: The guess just made.
+        secret: The number being guessed.
+        low: Lowest possible secret, inclusive.
+        high: Highest possible secret, inclusive.
+        attempt_number: Which guess this was, used to rotate the taunts.
+
+    Returns:
+        A player-facing hint string.
+
+    Easy states the direction, the proximity band and the remaining range.
+    Normal states the direction only. Hard returns a taunt whose initials
+    spell the direction -- the information is all there, just hidden.
+    """
+    if outcome == "Win":
+        return hint_message("Win")
+
+    mode = HINT_MODES.get(difficulty, "partial")
+
+    if mode == "troll":
+        options = TROLL_HINTS[outcome]
+        return options[(attempt_number - 1) % len(options)]
+
+    if mode == "generous":
+        band = PROXIMITY_LABELS[proximity_band(guess, secret, low, high)]
+        new_low, new_high = narrowed_range(guess, outcome, low, high)
+        return f"{hint_message(outcome)}  |  {band}  |  It is between {new_low} and {new_high}."
+
+    return hint_message(outcome)
+
+
+# ---------------------------------------------------------------------------
+# Feature: per-difficulty time limits (Stretch Challenge 2)
+# ---------------------------------------------------------------------------
+
+TIME_LIMITS = {"Easy": None, "Normal": 300, "Hard": 60}
+
+
+def get_time_limit(difficulty: str):
+    """Return the round time limit in seconds, or None when untimed.
+
+    Args:
+        difficulty: ``"Easy"``, ``"Normal"`` or ``"Hard"``.
+
+    Returns:
+        ``None`` for Easy, ``300`` for Normal, ``60`` for Hard. An unknown
+        difficulty falls back to Normal rather than running untimed, so a typo
+        can never accidentally remove the limit.
+    """
+    if difficulty not in TIME_LIMITS:
+        return TIME_LIMITS[DEFAULT_DIFFICULTY]
+    return TIME_LIMITS[difficulty]
+
+
+def time_remaining(started_at: float, now: float, limit):
+    """Return the seconds left in the round.
+
+    Args:
+        started_at: Unix timestamp when the round began.
+        now: Current unix timestamp.
+        limit: Seconds allowed, or ``None`` for an untimed round.
+
+    Returns:
+        Seconds remaining, never below zero, or ``None`` when untimed.
+    """
+    if limit is None:
+        return None
+    return max(limit - (now - started_at), 0.0)
+
+
+def is_time_up(started_at: float, now: float, limit) -> bool:
+    """Return True when the round's clock has run out.
+
+    Args:
+        started_at: Unix timestamp when the round began.
+        now: Current unix timestamp.
+        limit: Seconds allowed, or ``None`` for an untimed round.
+
+    Returns:
+        ``False`` always when untimed, otherwise whether the limit has passed.
+    """
+    remaining = time_remaining(started_at, now, limit)
+    return remaining is not None and remaining <= 0
+
+
+def format_clock(seconds) -> str:
+    """Format a seconds count as M:SS for display.
+
+    Args:
+        seconds: Seconds remaining, or ``None`` for an untimed round.
+
+    Returns:
+        ``"--:--"`` when untimed, otherwise a ``M:SS`` string.
+    """
+    if seconds is None:
+        return "--:--"
+    total = int(seconds)
+    return f"{total // 60}:{total % 60:02d}"

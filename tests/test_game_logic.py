@@ -8,7 +8,16 @@ buggy code and passes against the repaired version.
 import pytest
 
 from logic_utils import (
+    TROLL_HINTS,
+    acrostic,
     check_guess,
+    format_clock,
+    get_time_limit,
+    hint_for,
+    is_time_up,
+    narrowed_range,
+    proximity_band,
+    time_remaining,
     get_attempt_limit,
     get_range_for_difficulty,
     hint_message,
@@ -184,3 +193,110 @@ def test_unknown_difficulty_falls_back_to_normal():
     """A typo in the difficulty name must not crash the range lookup."""
     assert get_range_for_difficulty("Nightmare") == get_range_for_difficulty("Normal")
     assert get_attempt_limit("Nightmare") == get_attempt_limit("Normal")
+
+
+# ---------------------------------------------------------------------------
+# Feature tests: difficulty-tiered hints and per-difficulty timers
+# ---------------------------------------------------------------------------
+
+
+def test_troll_hints_encode_the_direction_in_their_initials():
+    """Every Hard-difficulty taunt must still spell its own direction.
+
+    The joke only works if the acrostic is intact, and a one-word edit would
+    silently break it. This test is the guard.
+    """
+    for taunt in TROLL_HINTS["Too High"]:
+        assert acrostic(taunt) == "LOWER", taunt
+    for taunt in TROLL_HINTS["Too Low"]:
+        assert acrostic(taunt) == "HIGHER", taunt
+
+
+def test_troll_hints_never_say_the_direction_out_loud():
+    """A taunt containing the literal word would give the puzzle away."""
+    for taunts in TROLL_HINTS.values():
+        for taunt in taunts:
+            assert "higher" not in taunt.lower()
+            assert "lower" not in taunt.lower()
+
+
+def test_hint_detail_increases_as_difficulty_drops():
+    """Easy should say strictly more than Normal, which says more than Hard."""
+    kwargs = dict(outcome="Too High", guess=80, secret=18, low=1, high=100)
+    easy = hint_for(difficulty="Easy", **kwargs)
+    normal = hint_for(difficulty="Normal", **kwargs)
+    hard = hint_for(difficulty="Hard", **kwargs)
+
+    assert "LOWER" in easy and "between" in easy
+    assert "LOWER" in normal and "between" not in normal
+    assert "LOWER" not in hard
+    assert acrostic(hard) == "LOWER"
+
+
+def test_easy_hint_reports_proximity():
+    """Easy tells the player how warm they are, not just which way to go."""
+    near = hint_for("Easy", "Too High", 20, 18, 1, 100)
+    far = hint_for("Easy", "Too High", 99, 18, 1, 100)
+    assert "HOT" in near or "BOILING" in near
+    assert "ICE COLD" in far
+
+
+def test_proximity_is_measured_against_the_range_not_raw_distance():
+    """The same raw distance means different things in different ranges.
+
+    Being 5 away is respectable in a 1-100 game and hopeless in a 1-20 one, so
+    the band must get colder as the range narrows even though the gap is
+    identical. Asserting the ordering rather than two exact band names keeps
+    this test about the behaviour instead of the threshold constants.
+    """
+    order = ["boiling", "hot", "warm", "cool", "cold"]
+    wide = proximity_band(15, 10, 1, 100)
+    narrow = proximity_band(15, 10, 1, 20)
+    assert order.index(narrow) > order.index(wide)
+
+
+def test_narrowed_range_tightens_and_never_inverts():
+    """The bound Easy reports must stay a valid range at the edges."""
+    assert narrowed_range(50, "Too High", 1, 100) == (1, 49)
+    assert narrowed_range(50, "Too Low", 1, 100) == (51, 100)
+    assert narrowed_range(1, "Too High", 1, 100) == (1, 1)
+    assert narrowed_range(100, "Too Low", 1, 100) == (100, 100)
+
+
+def test_time_limits_per_difficulty():
+    """Easy is untimed, Normal gets 5 minutes, Hard gets 1."""
+    assert get_time_limit("Easy") is None
+    assert get_time_limit("Normal") == 300
+    assert get_time_limit("Hard") == 60
+
+
+def test_unknown_difficulty_is_timed_not_untimed():
+    """A typo must not accidentally hand the player an untimed round."""
+    assert get_time_limit("Nightmare") == get_time_limit("Normal")
+
+
+def test_round_expires_only_after_the_limit_passes():
+    """The clock ends the round at the limit, not before it."""
+    start = 1_000.0
+    assert is_time_up(start, start + 59, 60) is False
+    assert is_time_up(start, start + 60, 60) is True
+    assert is_time_up(start, start + 900, 60) is True
+
+
+def test_untimed_rounds_never_expire():
+    """Easy has no limit, so no amount of elapsed time should end it."""
+    assert is_time_up(1_000.0, 1_000_000.0, None) is False
+    assert time_remaining(1_000.0, 1_000_000.0, None) is None
+
+
+def test_time_remaining_never_goes_negative():
+    """A stale page should read 0:00, not a negative countdown."""
+    assert time_remaining(1_000.0, 1_500.0, 60) == 0.0
+
+
+def test_clock_formatting():
+    """The HUD clock is M:SS, and untimed rounds show placeholder dashes."""
+    assert format_clock(65) == "1:05"
+    assert format_clock(0) == "0:00"
+    assert format_clock(300) == "5:00"
+    assert format_clock(None) == "--:--"
