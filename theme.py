@@ -53,8 +53,65 @@ header[data-testid="stHeader"],
 div[data-testid="stToolbar"] { right: 8px; }
 div[data-testid="stDecoration"] { display: none; }
 
-.stApp h1, .stApp h2, .stApp h3, .stApp p, .stApp label, .stApp span {
+/* Deliberately NOT `span` here. Streamlit renders its expander arrow as a
+   Material Symbols ligature inside a <span>: the element's text content is
+   literally "arrow_drop_down", and the icon font turns it into a glyph.
+   Overriding font-family on every span swaps that font out, so the ligature
+   never resolves and the raw word paints on top of the label. */
+.stApp h1, .stApp h2, .stApp h3, .stApp p, .stApp label {
   font-family: var(--font-ui);
+}
+
+/* Belt and braces: never let a theme font reach an icon element. */
+[data-testid="stIconMaterial"],
+[data-testid="stExpanderToggleIcon"],
+[data-testid="stExpanderToggleIcon"] *,
+span.material-icons,
+span.material-icons-outlined,
+span[class*="material-symbols"] {
+  font-family: 'Material Symbols Rounded', 'Material Symbols Outlined',
+               'Material Icons', sans-serif !important;
+  font-feature-settings: 'liga' !important;
+}
+
+/* ---- expander: theme it, and move the arrow to the right ---- */
+[data-testid="stExpander"] details {
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: var(--bg-panel-2);
+  overflow: hidden;
+}
+[data-testid="stExpander"] summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-size: .82rem;
+  color: var(--muted);
+}
+[data-testid="stExpander"] summary:hover { color: var(--accent); }
+/* Push the toggle arrow to the far right of the header row.
+   Streamlit nests it as  summary > span > span > span[stIconMaterial],
+   with the label in a sibling <div>. The wrapper span is the real flex
+   container, so the ordering has to be applied there, not on the summary. */
+[data-testid="stExpander"] summary > span {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+}
+[data-testid="stExpander"] summary > span > div { order: 1; }
+[data-testid="stExpander"] summary > span > span:first-child {
+  order: 99;
+  margin-left: auto;
+}
+[data-testid="stExpander"] summary [data-testid="stIconMaterial"] {
+  color: var(--accent);
+  font-size: 1.25rem;
 }
 
 section[data-testid="stSidebar"] {
