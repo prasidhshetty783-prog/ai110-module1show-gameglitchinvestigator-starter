@@ -101,14 +101,15 @@ if st.session_state.status != "playing":
     st.stop()
 
 if submit:
-    st.session_state.attempts += 1
+    ok, guess_int, err = parse_guess(raw_guess, low, high)
 
-    ok, guess_int, err = parse_guess(raw_guess)
-
+    # FIX: `attempts += 1` used to run before parsing, so typing "abc" showed an
+    # error AND burned one of your limited guesses. Invalid input is now free,
+    # and rejected text no longer pollutes the guess history.
     if not ok:
-        st.session_state.history.append(raw_guess)
         st.error(err)
     else:
+        st.session_state.attempts += 1
         st.session_state.history.append(guess_int)
 
         # FIX: the secret was stringified on every even-numbered attempt here,

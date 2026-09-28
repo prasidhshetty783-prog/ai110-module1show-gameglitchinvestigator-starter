@@ -15,20 +15,28 @@ def get_range_for_difficulty(difficulty: str):
     return 1, 100
 
 
-def parse_guess(raw: str):
+def parse_guess(raw, low, high):
+    # FIX: the original accepted any integer it could produce -- -20 and 5000
+    # both passed even when the range was 1 to 100 -- and ran int(float(raw)),
+    # silently scoring a typed "3.9" as a guess of 3. Range is now enforced and
+    # decimals are rejected out loud.
     if raw is None:
         return False, None, "Enter a guess."
 
-    if raw == "":
+    text = str(raw).strip()
+    if text == "":
         return False, None, "Enter a guess."
 
+    if "." in text:
+        return False, None, "Whole numbers only -- no decimals."
+
     try:
-        if "." in raw:
-            value = int(float(raw))
-        else:
-            value = int(raw)
-    except Exception:
+        value = int(text)
+    except ValueError:
         return False, None, "That is not a number."
+
+    if value < low or value > high:
+        return False, None, f"Out of range. Guess between {low} and {high}."
 
     return True, value, None
 
