@@ -15,6 +15,7 @@ import streamlit as st
 from logic_utils import (
     check_guess,
     get_range_for_difficulty,
+    hint_message,
     parse_guess,
     update_score,
 )
@@ -110,15 +111,13 @@ if submit:
     else:
         st.session_state.history.append(guess_int)
 
-        if st.session_state.attempts % 2 == 0:
-            secret = str(st.session_state.secret)
-        else:
-            secret = st.session_state.secret
-
-        outcome, message = check_guess(guess_int, secret)
+        # FIX: the secret was stringified on every even-numbered attempt here,
+        # which is what triggered the silent string comparison inside
+        # check_guess. It is passed straight through as an int now.
+        outcome = check_guess(guess_int, st.session_state.secret)
 
         if show_hint:
-            st.warning(message)
+            st.warning(hint_message(outcome))
 
         st.session_state.score = update_score(
             current_score=st.session_state.score,
