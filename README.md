@@ -133,9 +133,12 @@ fixed, each written to fail against the original code), and 24 edge-case and
 feature assertions.
 
 ```
-============================= test session starts ==============================
-platform linux -- Python 3.10.12, pytest-9.1.1, pluggy-1.6.0
-collected 37 items
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0 -- D:\CodePath\Project 1\ai110-module1show-gameglitchinvestigator-starter\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\CodePath\Project 1\ai110-module1show-gameglitchinvestigator-starter
+plugins: anyio-4.15.1
+collecting ... collected 37 items
 
 tests/test_game_logic.py::test_winning_guess PASSED                      [  2%]
 tests/test_game_logic.py::test_guess_too_high PASSED                     [  5%]
@@ -175,7 +178,7 @@ tests/test_game_logic.py::test_untimed_rounds_never_expire PASSED        [ 94%]
 tests/test_game_logic.py::test_time_remaining_never_goes_negative PASSED [ 97%]
 tests/test_game_logic.py::test_clock_formatting PASSED                   [100%]
 
-============================== 37 passed in 0.17s ==============================
+============================= 37 passed in 0.05s ==============================
 ```
 
 Lint is clean too — `ruff check .` reports `All checks passed!`. Config is in

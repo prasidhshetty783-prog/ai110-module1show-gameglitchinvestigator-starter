@@ -1,7 +1,8 @@
-============================= test session starts ==============================
-platform linux -- Python 3.10.12, pytest-9.1.1, pluggy-1.6.0 -- /usr/bin/python3
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0 -- D:\CodePath\Project 1\ai110-module1show-gameglitchinvestigator-starter\.venv\Scripts\python.exe
 cachedir: .pytest_cache
-rootdir: /sessions/rcw-01xphp1fesigucbuufoh7j9w/mnt/Project 1/ai110-module1show-gameglitchinvestigator-starter
+rootdir: D:\CodePath\Project 1\ai110-module1show-gameglitchinvestigator-starter
+plugins: anyio-4.15.1
 collecting ... collected 37 items
 
 tests/test_game_logic.py::test_winning_guess PASSED                      [  2%]
@@ -42,4 +43,4 @@ tests/test_game_logic.py::test_untimed_rounds_never_expire PASSED        [ 94%]
 tests/test_game_logic.py::test_time_remaining_never_goes_negative PASSED [ 97%]
 tests/test_game_logic.py::test_clock_formatting PASSED                   [100%]
 
-============================== 37 passed in 0.17s ==============================
+============================= 37 passed in 0.05s ==============================
