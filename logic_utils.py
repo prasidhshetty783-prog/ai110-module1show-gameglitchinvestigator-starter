@@ -5,14 +5,31 @@ Streamlit. No behaviour is changed in this commit -- the bugs come out next.
 """
 
 
-def get_range_for_difficulty(difficulty: str):
-    if difficulty == "Easy":
-        return 1, 20
-    if difficulty == "Normal":
-        return 1, 100
-    if difficulty == "Hard":
-        return 1, 50
-    return 1, 100
+# FIX: difficulty was scattered across three places -- a range function, a
+# separate attempt-limit dict in app.py, and a hardcoded banner string. Keeping
+# them in one table makes it impossible for the three to disagree again.
+#
+# The VALUES are deliberately unchanged. An AI review claimed Hard's narrower
+# range made it easier than Normal; the arithmetic says otherwise (optimal play
+# needs ceil(log2(n)) guesses: Easy 5 of 6, Normal 7 of 8, Hard 6 of 5), so Hard
+# is already the hardest and was left alone. See reflection.md.
+DIFFICULTY_SETTINGS = {
+    "Easy": {"low": 1, "high": 20, "attempts": 6},
+    "Normal": {"low": 1, "high": 100, "attempts": 8},
+    "Hard": {"low": 1, "high": 50, "attempts": 5},
+}
+
+DEFAULT_DIFFICULTY = "Normal"
+
+
+def get_range_for_difficulty(difficulty):
+    settings = DIFFICULTY_SETTINGS.get(difficulty, DIFFICULTY_SETTINGS[DEFAULT_DIFFICULTY])
+    return settings["low"], settings["high"]
+
+
+def get_attempt_limit(difficulty):
+    settings = DIFFICULTY_SETTINGS.get(difficulty, DIFFICULTY_SETTINGS[DEFAULT_DIFFICULTY])
+    return settings["attempts"]
 
 
 def parse_guess(raw, low, high):

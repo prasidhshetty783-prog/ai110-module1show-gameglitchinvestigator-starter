@@ -13,7 +13,9 @@ import streamlit as st
 # Mixing pure rules with UI code is what let the string-coercion bug hide --
 # there was no way to call the comparison in a test without booting Streamlit.
 from logic_utils import (
+    DIFFICULTY_SETTINGS,
     check_guess,
+    get_attempt_limit,
     get_range_for_difficulty,
     hint_message,
     parse_guess,
@@ -43,31 +45,36 @@ st.sidebar.header("Settings")
 
 difficulty = st.sidebar.selectbox(
     "Difficulty",
-    ["Easy", "Normal", "Hard"],
+    list(DIFFICULTY_SETTINGS.keys()),
     index=1,
 )
 
-attempt_limit_map = {
-    "Easy": 6,
-    "Normal": 8,
-    "Hard": 5,
-}
-attempt_limit = attempt_limit_map[difficulty]
-
 low, high = get_range_for_difficulty(difficulty)
+attempt_limit = get_attempt_limit(difficulty)
 
 st.sidebar.caption(f"Range: {low} to {high}")
 st.sidebar.caption(f"Attempts allowed: {attempt_limit}")
 
 if "secret" not in st.session_state:
     start_new_game(low, high)
+    st.session_state.difficulty = difficulty
+
+# FIX: the secret was generated once and never regenerated, so switching
+# difficulty mid-session could leave a secret outside the new range -- a secret
+# of 73 with an Easy range of 1-20 is unwinnable. Changing difficulty now
+# starts a fresh round.
+if st.session_state.get("difficulty") != difficulty:
+    st.session_state.difficulty = difficulty
+    start_new_game(low, high)
+    st.info(f"Difficulty changed to {difficulty}. New round started.")
 
 st.subheader("Make a guess")
 
-st.info(
-    f"Guess a number between 1 and 100. "
-    f"Attempts left: {attempt_limit - st.session_state.attempts}"
-)
+attempts_left = attempt_limit - st.session_state.attempts
+
+# FIX: this banner hardcoded "between 1 and 100" on every difficulty, so it lied
+# to the player on Easy (1-20) and on Hard. It now reads the real range.
+st.info(f"Guess a number between {low} and {high}. Attempts left: {attempts_left}")
 
 with st.expander("Developer Debug Info"):
     st.write("Secret:", st.session_state.secret)
