@@ -65,7 +65,7 @@ In the `if submit:` block, `st.session_state.attempts += 1` runs *before* `parse
 
 ### One claim I rejected
 
-The fifth issue the assistant raised was that Hard's narrower range (1-50 vs Normal's 1-100) made it the easier setting. I checked the arithmetic instead of trusting it, found the opposite, and did not fix it -- so it is not in the table above. The full write-up is in section 2, "The suggestion I did not accept."
+The fifth issue the assistant raised was that Hard's narrower range (1-50 vs Normal's 1-100) made it the easier setting. I accepted it at first. It came apart when I asked for the reasoning in plain language, which is when the arithmetic showed the opposite, so I reverted the change and withdrew the claim -- it is not in the table above. The full write-up is in section 2, "The suggestion I did not accept."
 
 ---
 
@@ -92,9 +92,11 @@ It failed against the original code and passed after the change. I then ran the 
 
 ### The suggestion I did not accept: "Hard is easier than Normal"
 
-**What the AI suggested.** While reviewing the difficulty logic, it flagged that `get_range_for_difficulty` returns `(1, 50)` for Hard -- a narrower range than Normal's `(1, 100)` -- and concluded that Hard was therefore the easier of the two settings. It proposed widening Hard to `(1, 200)` and raising its attempt limit from 5 to 8, and wrote the change up as a bug fix. I nearly accepted it. It was specific, it named the right function, and the reasoning sounded obvious.
+**What the AI suggested.** While reviewing the difficulty logic, it flagged that `get_range_for_difficulty` returns `(1, 50)` for Hard -- a narrower range than Normal's `(1, 100)` -- and concluded that Hard was therefore the easier of the two settings. It did not stop at flagging it. It wrote the claim into my bug table as bug number six, proposed widening Hard to `(1, 200)` and raising its attempt limit from 5 to 8, implemented that change, added a passing test called `test_hard_is_harder_than_normal`, and committed it. I accepted all of it at the time. It was specific, it named the right function, and the reasoning sounded obvious.
 
-**Why I rejected it.** Before writing it into my bug table I tried to work out how I would reproduce it, and realised I could not -- "the range is narrower" is something you read, not something you observe while playing. So I did the arithmetic myself. Difficulty in a guessing game is not the size of the range on its own; it is the range measured against the number of guesses you get. Playing well means halving the remaining numbers every turn, so a guaranteed win needs `ceil(log2(n))` guesses:
+**How I caught it.** Not by reviewing the diff -- I had already approved that. I caught it by asking the AI to explain the change to me in plain language, as if to someone with no background, because I wanted to understand the reasoning before it went into my report rather than just take the conclusion.
+
+Forcing the simple explanation is what broke it. To explain *why* a wider range is harder, it had to spell out what "harder" actually means in a guessing game, and that meant putting the range next to the attempt limit for the first time. Difficulty is not the size of the range on its own; it is the range measured against how many guesses you get. Playing well means halving the remaining numbers every turn, so a guaranteed win needs `ceil(log2(n))` guesses:
 
 | Difficulty | Numbers | Guesses needed | Guesses given | Guaranteed win? |
 |---|---|---|---|---|
@@ -102,11 +104,15 @@ It failed against the original code and passed after the change. I then ran the 
 | Normal | 100 | 7 | 8 | Yes, one spare |
 | Hard | 50 | 6 | 5 | **No -- one short** |
 
-Hard is the only setting where perfect play still is not enough, which makes it genuinely the hardest of the three. The AI had looked at one number and never checked it against the one sitting next to it. The odd-looking range progression (20, then 50, then 100) is inconsistent and reads strangely, but an inconsistent-looking number is not a bug.
+Hard is the only setting where perfect play still is not enough. It was already the hardest of the three, and the original claim had it exactly backwards. The AI had looked at one number and never checked it against the one sitting beside it, and I had not either. Its own plain-language explanation is what exposed that, and it flagged the contradiction to me before I finished reading.
 
-Accepting it would have cost me twice. The "fix" would have made Hard *guaranteed winnable* -- quietly redesigning the game while claiming to repair it -- and I would have published a false bug in my own report. I reverted the change and withdrew the claim from my bug list, taking Part B from five findings down to four.
+I want to be accurate about the division of labour here, because it is the part I actually learned from. **The arithmetic was the AI's. The decision was mine.** It surfaced the error and laid out three options -- revert Hard to the starter's values and withdraw the bug, keep the wider range but relabel it as a deliberate redesign rather than a fix, or split the difference at 1-50 with 6 attempts. I chose to revert, because a bug report has to be true before it is interesting: the "fix" would have made Hard *guaranteed winnable*, quietly redesigning the game while claiming to repair it, and I would have published a false bug in my own report. That took Part B from five findings down to four.
 
-**How I verified my version.** I put the reasoning into a test so the decision cannot be silently undone later:
+**The technique I am keeping.** Asking for a plain-language explanation is not politeness, it is a test. A wrong idea is much harder to state simply than a right one, because simplifying forces you to connect the claim to the thing it actually depends on. "The range is narrower" survives as a bullet point. It does not survive being explained to someone who then asks "harder compared to what?"
+
+There is a second lesson underneath that one. My review of the original diff passed it. I read the code, the change was clean, the test was green -- and the test was green because it asserted the wrong thing (`hard_high > normal_high`, which is a fact about two numbers, not about difficulty). A passing test only proves the code does what the test says; it says nothing about whether the test asks the right question.
+
+**How I verified my version.** I replaced the bad test with one that encodes the actual reasoning, so the decision cannot be silently undone later:
 
 ```python
 def test_hard_is_the_only_difficulty_you_cannot_guarantee_winning():
@@ -120,8 +126,6 @@ def test_hard_is_the_only_difficulty_you_cannot_guarantee_winning():
 ```
 
 A second test pins all three difficulties to the starter's original values, so a future refactor cannot rebalance the game by accident. I also played a Hard round to confirm the sidebar still reads "Range: 1 to 50 / Attempts allowed: 5" after the revert.
-
-This is the moment the project actually taught me something. The AI was fluent, specific, confident and wrong, and the only thing standing between that and my submitted work was me checking a number.
 
 ---
 

@@ -93,11 +93,18 @@ I reproduced all four in the running app before they went in the table.
 
 | Claim | Verdict |
 |---|---|
-| "Hard is easier than Normal — its range (1–50) is narrower than Normal's (1–100)" | **Wrong.** Difficulty is range measured against attempts. Optimal play needs `ceil(log2(n))` guesses: Easy 5 of 6 given, Normal 7 of 8, Hard **6 of 5** — Hard is the only setting you cannot guarantee winning, so it is already the hardest. No fix made, claim withdrawn from the bug list |
+| "Hard is easier than Normal — its range (1–50) is narrower than Normal's (1–100)" | **Wrong, and I accepted it at first.** It was written into my bug table, fixed, tested and committed before anyone questioned it. It came apart when I asked for the change to be explained in plain language: stating *why* a wider range is harder forced the range to be put next to the attempt limit, and the arithmetic said the opposite. Optimal play needs `ceil(log2(n))` guesses — Easy 5 of 6 given, Normal 7 of 8, Hard **6 of 5** — so Hard is the only setting you cannot guarantee winning, and was already the hardest. I reverted the change and withdrew the claim |
 
-**Tally: 5 found by me, 5 raised by the AI, 4 of those accepted, 1 refuted.** On
+**Tally: 5 found by me, 5 raised by the AI, 4 of those accepted, 1 withdrawn.** On
 three of my five, the AI supplied the code-level cause I could not have named
 from the UI alone — which is the split I would expect from a good pairing.
+
+On the withdrawn one, credit where it is due: the arithmetic that refuted it was
+the AI's own, produced when I asked it to explain the change in plain language.
+What was mine was asking for that explanation instead of taking the conclusion,
+and then deciding to revert rather than keep a redesign labelled as a bug fix.
+The habit worth keeping is the question, not the calculation — a wrong idea is
+much harder to state simply than a right one.
 
 The shape of the whole project follows from that opening: **I observe, the AI
 explains, I verify, and I decide what counts.** Every later section of this file

@@ -71,11 +71,14 @@ inputs, expected versus actual behaviour and code locations, are in
 9. **Invalid input burned an attempt** — the counter incremented before parsing,
    so typing `abc` cost you a turn.
 
-**One reported bug I rejected.** The AI review also claimed Hard was *easier*
-than Normal because its range is narrower. Checking it against the attempt limit
-shows the opposite — optimal play needs `ceil(log2(n))` guesses, and Hard is the
-only difficulty that gives fewer than that — so Hard is already the hardest and
-I made no change. Written up in [`reflection.md`](reflection.md) section 2.
+**One reported bug I withdrew.** The AI review also claimed Hard was *easier*
+than Normal because its range is narrower, and I accepted it — it was written up,
+fixed, tested and committed before anyone questioned it. It came apart when I
+asked for the change to be explained in plain language, which forced the range to
+be put next to the attempt limit: optimal play needs `ceil(log2(n))` guesses, and
+Hard is the only difficulty that gives fewer than that, so it was already the
+hardest. I reverted the change and withdrew the claim. Written up in
+[`reflection.md`](reflection.md) section 2.
 
 ## 🔧 The fixes
 
