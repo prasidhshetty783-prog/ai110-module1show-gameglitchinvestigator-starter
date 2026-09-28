@@ -20,6 +20,20 @@ from logic_utils import (
     update_score,
 )
 
+def start_new_game(low, high):
+    # FIX: the original "New Game" handler reset only `attempts` and `secret`.
+    # It left `score`, `history` and `status` untouched, so the score and guess
+    # list carried over and -- after a win -- `status` was still "won", which
+    # made the guard further down call st.stop() and freeze the page on "You
+    # already won." It also called random.randint(1, 100) directly, ignoring the
+    # difficulty range. One function now owns the entire reset.
+    st.session_state.secret = random.randint(low, high)
+    st.session_state.attempts = 0  # FIX: was initialised to 1, costing a guess.
+    st.session_state.score = 0
+    st.session_state.status = "playing"
+    st.session_state.history = []
+
+
 st.set_page_config(page_title="Glitchy Guesser", page_icon="🎮")
 
 st.title("🎮 Game Glitch Investigator")
@@ -46,19 +60,7 @@ st.sidebar.caption(f"Range: {low} to {high}")
 st.sidebar.caption(f"Attempts allowed: {attempt_limit}")
 
 if "secret" not in st.session_state:
-    st.session_state.secret = random.randint(low, high)
-
-if "attempts" not in st.session_state:
-    st.session_state.attempts = 1
-
-if "score" not in st.session_state:
-    st.session_state.score = 0
-
-if "status" not in st.session_state:
-    st.session_state.status = "playing"
-
-if "history" not in st.session_state:
-    st.session_state.history = []
+    start_new_game(low, high)
 
 st.subheader("Make a guess")
 
@@ -88,8 +90,7 @@ with col3:
     show_hint = st.checkbox("Show hint", value=True)
 
 if new_game:
-    st.session_state.attempts = 0
-    st.session_state.secret = random.randint(1, 100)
+    start_new_game(low, high)
     st.success("New game started.")
     st.rerun()
 
