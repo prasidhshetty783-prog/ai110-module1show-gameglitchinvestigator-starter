@@ -60,6 +60,45 @@ Four reproduced exactly as described and went into the bug table. One did not,
 and I threw it out: the claim that Hard was easier than Normal because its range
 is narrower. Full write-up in `reflection.md` section 2.
 
+### Who found what
+
+Numbering matches `reflection.md` section 1. "Symptom" means it was visible
+while playing; "cause" means it took reading the source to name the line.
+
+**Found by me, by playing (bugs 1–5)**
+
+| # | Bug | How I found it | What the AI added |
+|---|---|---|---|
+| 1 | Attempt counter off by one — 8 promised, 7 given | Counted the History entries in the debug panel across a full round | Named the line: `attempts` initialised to `1` instead of `0` |
+| 2 | "New Game" does not start a new game | Clicked it; score and history stayed put, and after a win the page froze | Found the cause was three unreset keys, and that `status` staying `"won"` is what triggers `st.stop()` |
+| 3 | Hint text is backwards | Watched the hint against the secret in the debug panel | Confirmed, and isolated it as its own defect: the two message strings are swapped in `check_guess` |
+| 4 | Hints contradict each other on alternate turns (100 → "lower", 99 → "higher", answer 18) | Reproduced it on video | **This is the one the AI earned its keep on.** Traced it to `app.py` stringifying the secret on even attempts and a bare `except TypeError` falling back to text comparison. I had no idea *why*; it explained `"100" < "18"` character by character |
+| 5 | Guesses outside the range are accepted | Typed 100 in a 1–100 game and expected a rejection | Corrected my framing — 100 is legal; the real defect is **no bounds check at all** (`-20`, `5000` also pass) plus `int(float("3.9"))` silently scoring 3 |
+
+I logged 3 and 4 as one complaint ("the hints are broken"). The AI split them,
+correctly — they have separate causes and needed separate fixes.
+
+**Found by the AI on its re-scan, reproduced by me (bugs 6–9)**
+
+| # | Bug | Why I had missed it |
+|---|---|---|
+| 6 | The range banner hardcodes "between 1 and 100", so it lies on Easy (1–20) | I only ever played Normal, where the text happens to be true |
+| 7 | Changing difficulty mid-session can strand a secret outside the new range, making the round unwinnable | Same — I never touched the difficulty selector |
+| 8 | `update_score` *adds* 5 points for a "Too High" guess on even attempts, scores the two wrong directions inconsistently, and has no floor | I was watching the hints, not the score |
+| 9 | Invalid input still burns an attempt — `attempts += 1` runs before `parse_guess` | I never typed anything invalid while recording |
+
+I reproduced all four in the running app before they went in the table.
+
+**Found by the AI and rejected by me**
+
+| Claim | Verdict |
+|---|---|
+| "Hard is easier than Normal — its range (1–50) is narrower than Normal's (1–100)" | **Wrong.** Difficulty is range measured against attempts. Optimal play needs `ceil(log2(n))` guesses: Easy 5 of 6 given, Normal 7 of 8, Hard **6 of 5** — Hard is the only setting you cannot guarantee winning, so it is already the hardest. No fix made, claim withdrawn from the bug list |
+
+**Tally: 5 found by me, 5 raised by the AI, 4 of those accepted, 1 refuted.** On
+three of my five, the AI supplied the code-level cause I could not have named
+from the UI alone — which is the split I would expect from a good pairing.
+
 The shape of the whole project follows from that opening: **I observe, the AI
 explains, I verify, and I decide what counts.** Every later section of this file
 is the same loop applied to bigger changes.
