@@ -10,6 +10,62 @@ watched a test go from red to green.
 
 ---
 
+## How the collaboration actually started (Phase 1)
+
+Worth recording before the stretch features, because the order matters: **I found
+the first bugs, not the AI.** The AI's first job on this project was to check my
+work, not to do it.
+
+**Step 1 — I played the game and recorded it.** Two full rounds on Normal
+difficulty, screen recording running, before opening a single source file. I came
+out with three issues written in my own words:
+
+1. The sidebar promised 8 attempts but the game cut me off after 7 — visible in
+   the History list in the debug panel.
+2. Clicking "New Game" did not start a new game.
+3. The hints contradicted each other. I guessed, it said higher, so I guessed
+   100 and it said lower; I guessed 99 and it said higher again. The answer
+   turned out to be 18. I also noted that the game let me enter numbers outside
+   the stated 1–100 range at all.
+
+**Step 2 — I gave the AI those three findings and set it two tasks, in this
+order.** First: *check whether I am right.* Second: *now re-scan the code and
+find the ones I missed.* Verification before generation, deliberately. I wanted
+my own observations confirmed or refuted against the source before letting it
+loose to add its own, so that anything it found later would be additional rather
+than mixed in with mine.
+
+**Step 3 — what came back on the verification pass.** All three of mine held up,
+and it traced each to a specific line. It also showed me that my third finding
+was really *two* defects wearing one costume: the hint strings were swapped in
+`check_guess`, and separately `app.py` stringified the secret on even-numbered
+attempts, which made the comparison run on text instead of numbers. My "the
+hints are broken" became "the hints are backwards, *and* the comparison silently
+stops being arithmetic every other turn." That split is the single most useful
+thing the AI did on this project, and it only happened because I handed it a
+symptom I had reproduced myself and asked it to explain the cause.
+
+It also sharpened my range complaint. I had written that the game should not
+accept 100 — but 100 is legal on Normal. The real defect was that there was no
+bounds check at all (`-20` and `5000` also passed) plus silent decimal
+truncation.
+
+**Step 4 — the re-scan for what I missed.** Only after the verification pass did
+I ask it to read the rest of the file for things I could not have seen. I had
+played only on Normal and had been watching the hints rather than the score, so
+the difficulty and scoring logic were blind spots. It returned five more.
+
+**Step 5 — I reproduced every one of those five before accepting any of them.**
+Four reproduced exactly as described and went into the bug table. One did not,
+and I threw it out: the claim that Hard was easier than Normal because its range
+is narrower. Full write-up in `reflection.md` section 2.
+
+The shape of the whole project follows from that opening: **I observe, the AI
+explains, I verify, and I decide what counts.** Every later section of this file
+is the same loop applied to bigger changes.
+
+---
+
 ## Agent Workflow (Challenge 2: Feature Expansion)
 
 **What task did I give the agent?**
