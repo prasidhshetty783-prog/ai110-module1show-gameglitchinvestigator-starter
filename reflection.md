@@ -174,13 +174,88 @@ The single most useful test was `test_string_secret_does_not_flip_the_comparison
 
 ## 4. What did you learn about Streamlit and state?
 
-- How would you explain Streamlit "reruns" and session state to a friend who has never used Streamlit?
+Here is how I would explain it to a friend who has never used Streamlit.
+
+A normal web page is built once and then patched in little pieces when something
+changes. Streamlit does not work that way. Every time you touch anything -- click
+a button, type in a box, move a dropdown -- Streamlit throws the whole page away
+and runs your Python file again from line one, top to bottom. That is a "rerun".
+It is why the code looks like a simple script instead of a pile of event
+handlers, and it is genuinely pleasant to write.
+
+The catch is that every ordinary variable is destroyed and recreated on each
+rerun. If you wrote `secret = random.randint(1, 100)` at the top of the file, the
+player would get a brand new secret every single time they guessed, and the game
+would be unwinnable. `st.session_state` is the fix: a dictionary that survives
+reruns for as long as the browser tab is open. Anything that has to outlive a
+click -- the secret, the score, the attempt count, the guess history -- has to
+live in there. It is the difference between a whiteboard you wipe every time and
+a notebook you keep.
+
+Two things bit me, and both came from the same misunderstanding.
+
+The first is that `st.session_state` is a bag of independent keys, not an object
+that knows what a "round" is. The original New Game handler reset two keys and
+forgot three. Nothing complained, because from Streamlit's point of view nothing
+was wrong -- those three keys still held perfectly valid values, just from the
+previous round. That is why I replaced the scattered assignments with one
+`start_new_game()` function: the language will not tell you that you forgot a
+key, so the only defence is having exactly one place where a reset can be
+written.
+
+The second is that reruns happen on *interaction*, not on *time*. I assumed a
+countdown would just count down. It does not -- the page sits frozen between
+clicks, so a server-rendered clock shows whatever it showed when you last did
+something. I ended up splitting it in two: a JavaScript ticker in the browser
+that looks alive, and the real expiry check in `is_time_up()` that runs on the
+server when a guess is submitted. The pretty one is a lie; the useful one is the
+one the player cannot see.
+
+The bigger lesson is why the string-comparison bug survived at all. It lived in
+`app.py`, tangled up with UI code, so there was no way to call `check_guess()`
+from a test without booting Streamlit. Once the rules moved into
+`logic_utils.py`, that bug became three lines of `assert`. Pure functions for
+rules, Streamlit for the screen -- the split is not tidiness, it is what makes
+bugs catchable.
 
 ---
 
 ## 5. Looking ahead: your developer habits
 
-- What is one habit or strategy from this project that you want to reuse in future labs or projects?
-  - This could be a testing habit, a prompting strategy, or a way you used Git.
-- What is one thing you would do differently next time you work with AI on a coding task?
-- In one or two sentences, describe how this project changed the way you think about AI generated code.
+**The habit I want to keep: writing the failing test before accepting the fix.**
+Not after. Before. When the AI explained the string-comparison bug, the
+explanation was plausible and I wanted to believe it -- and plausible is exactly
+the failure mode with AI-generated code. Writing `assert check_guess(100, "18")
+== "Too High"` first, watching it fail, then applying the fix and watching it
+pass, converted "the AI says this is fixed" into something I had seen with my own
+eyes. It costs about ninety seconds and it is the difference between believing
+and knowing.
+
+**What I would do differently: check the claim before writing it down.** I nearly
+shipped a false bug. The AI told me Hard was easier than Normal because its range
+was narrower, and it sounded so obviously right that I wrote it into my bug table
+before testing it. What saved me was trying to work out how I would *reproduce*
+it and realising I could not -- "the range is narrower" is something you read,
+not something you observe while playing. Doing the arithmetic took two minutes
+and showed the opposite: Hard is the only difficulty you cannot guarantee
+winning. Next time, the reproduction step comes first, and anything I cannot
+reproduce does not go in the report. Same applies to my own work -- when the
+expander arrow rendered as garbage text I blamed my screenshot environment for a
+whole round before reading my own CSS, which had caused it.
+
+**How this changed how I think about AI-generated code.** I came in thinking the
+risk was that AI writes code that *breaks*. Broken code is the easy case -- it
+crashes, you see a stack trace, you fix it. The real risk is code that works
+confidently and wrongly. The worst bug in this project was a bare
+`except TypeError` that caught an error and quietly answered the question anyway,
+comparing numbers as text. No crash, no console output, nothing to notice -- just
+a game that lied to the player on alternating turns. An AI wrote that because it
+was pattern-matching "handle the exception" without asking what the right
+behaviour was when the comparison is impossible.
+
+So the thing I am taking forward is narrower than "review AI code." It is:
+**be most suspicious where the AI was most confident, and treat silent failure
+handling as a bug until proven otherwise.** Fluency is not evidence. The AI in
+this project was articulate and specific every single time, including the time it
+was completely wrong about difficulty, and the only thing that separated the good
+suggestions from the bad one was me checking a number myself.

@@ -1,0 +1,45 @@
+============================= test session starts ==============================
+platform linux -- Python 3.10.12, pytest-9.1.1, pluggy-1.6.0 -- /usr/bin/python3
+cachedir: .pytest_cache
+rootdir: /sessions/rcw-01xphp1fesigucbuufoh7j9w/mnt/Project 1/ai110-module1show-gameglitchinvestigator-starter
+collecting ... collected 37 items
+
+tests/test_game_logic.py::test_winning_guess PASSED                      [  2%]
+tests/test_game_logic.py::test_guess_too_high PASSED                     [  5%]
+tests/test_game_logic.py::test_guess_too_low PASSED                      [  8%]
+tests/test_game_logic.py::test_hint_text_points_toward_the_secret PASSED [ 10%]
+tests/test_game_logic.py::test_string_secret_does_not_flip_the_comparison PASSED [ 13%]
+tests/test_game_logic.py::test_out_of_range_guesses_are_rejected PASSED  [ 16%]
+tests/test_game_logic.py::test_decimals_are_rejected_not_truncated PASSED [ 18%]
+tests/test_game_logic.py::test_difficulty_values_match_the_starter PASSED [ 21%]
+tests/test_game_logic.py::test_hard_is_the_only_difficulty_you_cannot_guarantee_winning PASSED [ 24%]
+tests/test_game_logic.py::test_wrong_guesses_never_add_points PASSED     [ 27%]
+tests/test_game_logic.py::test_both_wrong_directions_cost_the_same PASSED [ 29%]
+tests/test_game_logic.py::test_score_never_goes_negative PASSED          [ 32%]
+tests/test_game_logic.py::test_first_guess_win_is_worth_full_points PASSED [ 35%]
+tests/test_game_logic.py::test_empty_input_is_handled_gracefully[] PASSED [ 37%]
+tests/test_game_logic.py::test_empty_input_is_handled_gracefully[   ] PASSED [ 40%]
+tests/test_game_logic.py::test_empty_input_is_handled_gracefully[None] PASSED [ 43%]
+tests/test_game_logic.py::test_non_numeric_input_is_rejected[abc] PASSED [ 45%]
+tests/test_game_logic.py::test_non_numeric_input_is_rejected[fifty] PASSED [ 48%]
+tests/test_game_logic.py::test_non_numeric_input_is_rejected[1e5] PASSED [ 51%]
+tests/test_game_logic.py::test_non_numeric_input_is_rejected[50; DROP TABLE] PASSED [ 54%]
+tests/test_game_logic.py::test_non_numeric_input_is_rejected[\U0001f3ae] PASSED [ 56%]
+tests/test_game_logic.py::test_boundary_values_are_accepted PASSED       [ 59%]
+tests/test_game_logic.py::test_extremely_large_input_is_rejected_without_overflow PASSED [ 62%]
+tests/test_game_logic.py::test_surrounding_whitespace_is_tolerated PASSED [ 64%]
+tests/test_game_logic.py::test_unknown_difficulty_falls_back_to_normal PASSED [ 67%]
+tests/test_game_logic.py::test_troll_hints_encode_the_direction_in_their_initials PASSED [ 70%]
+tests/test_game_logic.py::test_troll_hints_never_say_the_direction_out_loud PASSED [ 72%]
+tests/test_game_logic.py::test_hint_detail_increases_as_difficulty_drops PASSED [ 75%]
+tests/test_game_logic.py::test_easy_hint_reports_proximity PASSED        [ 78%]
+tests/test_game_logic.py::test_proximity_is_measured_against_the_range_not_raw_distance PASSED [ 81%]
+tests/test_game_logic.py::test_narrowed_range_tightens_and_never_inverts PASSED [ 83%]
+tests/test_game_logic.py::test_time_limits_per_difficulty PASSED         [ 86%]
+tests/test_game_logic.py::test_unknown_difficulty_is_timed_not_untimed PASSED [ 89%]
+tests/test_game_logic.py::test_round_expires_only_after_the_limit_passes PASSED [ 91%]
+tests/test_game_logic.py::test_untimed_rounds_never_expire PASSED        [ 94%]
+tests/test_game_logic.py::test_time_remaining_never_goes_negative PASSED [ 97%]
+tests/test_game_logic.py::test_clock_formatting PASSED                   [100%]
+
+============================== 37 passed in 0.17s ==============================

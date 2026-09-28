@@ -359,7 +359,9 @@ def live_clock(seconds_left):
           const el = document.getElementById('gg-clock');
           function paint() {{
             const m = Math.floor(left / 60), s = String(left % 60).padStart(2, '0');
-            el.textContent = left > 0 ? `\u25b8 time remaining  ${{m}}:${{s}}` : '\u25b8 time remaining  0:00  --  submit to confirm';
+            const live = `\u25b8 time remaining  ${{m}}:${{s}}`;
+            const done = '\u25b8 time remaining  0:00  --  submit to confirm';
+            el.textContent = left > 0 ? live : done;
             el.style.color = left <= 15 ? '#ff5d6c' : '#8b9ab3';
             if (left > 0) {{ left -= 1; setTimeout(paint, 1000); }}
           }}
