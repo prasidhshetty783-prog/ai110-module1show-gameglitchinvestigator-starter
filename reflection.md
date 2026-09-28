@@ -36,36 +36,49 @@ Separately from the swapped text, my guesses of 100 and then 99 against a secret
 | Guess of 100 then 99, secret 18 | "Go LOWER" both times | 100 → "Go LOWER", 99 → "Go HIGHER" (contradictory) | none — `TypeError` is silently swallowed | `app.py`, even-attempt `secret = str(...)` + bare `except TypeError` in `check_guess` |
 | Guess of `5000`, then `-20`, then `3.9` | Rejected as out of range / invalid | All accepted; `3.9` is silently scored as `3` | none | `app.py`, `parse_guess` (no bounds check, `int(float(raw))`) |
 
-### Part B: Bugs I missed on my first pass, found by reading the code with AI
+### Part B: Bugs I missed on my first pass, surfaced by AI and then verified by me
 
 I played only on Normal, so I had no way to see the difficulty bugs, and I was watching the hints rather than the score. After my playthroughs I attached `app.py` and `logic_utils.py` to my AI assistant and asked it to walk through the scoring and difficulty logic line by line. It came back with five issues I had not caught.
 
-I did not take any of them on trust. I treated each one as a claim to be tested, went back into the running app, and tried to reproduce it myself: I switched to Easy and read the banner, started a round on Normal and changed difficulty mid-game, and watched the score across two consecutive wrong guesses. All five reproduced exactly as described, and I reported back to the assistant confirming which ones I had verified and what I saw on screen before adding any of them to the table below. Nothing in Part B is a code-reading guess that went unchecked -- the AI pointed, I confirmed.
+I did not take any of them on trust. I treated each one as a claim to be tested, went back into the running app, and tried to reproduce it myself. **Four held up. One did not, and I withdrew it** -- see the rejected claim at the end of this section. I reported back to the assistant on each one, confirming what I had verified and what I actually saw on screen, before adding anything to the table below. The AI pointed; I confirmed or refused.
 
-**Bug 6 — "Hard" difficulty is easier than "Normal."**
-`get_range_for_difficulty` in `app.py` returns `(1, 20)` for Easy, `(1, 100)` for Normal, and `(1, 50)` for Hard. Hard has a *narrower* range than Normal, so it is objectively the easier of the two. The difficulty ordering is inverted.
+**Bug 6 -- The range banner lies on every difficulty except Normal.**
+The `st.info(...)` call hardcodes the text `"Guess a number between 1 and 100"` regardless of the selected difficulty. On Easy, where the real range is 1 to 20, the UI tells the player something false. The `low` and `high` values are computed correctly just above and then never used in that message.
 
-**Bug 7 — The range banner lies on every difficulty except Normal.**
-The `st.info(...)` call hardcodes the text `"Guess a number between 1 and 100"` regardless of the selected difficulty. On Easy, where the real range is 1 to 20, the UI tells the player something false. The `low` and `high` values are computed correctly and then never used in that message.
+**Bug 7 -- Changing difficulty mid-session can make the game unwinnable.**
+The secret is generated once, inside `if "secret" not in st.session_state:`, and is never regenerated when the difficulty selector changes. Switching from Normal to Easy with a secret of 73 leaves a secret outside the new 1-20 range, so no valid guess can ever win.
 
-**Bug 8 — Changing difficulty mid-session can make the game unwinnable.**
-The secret is generated once, inside `if "secret" not in st.session_state:`, and is never regenerated when the difficulty selector changes. Switching from Normal to Easy with a secret of 73 leaves a secret that is outside the new 1–20 range, so no valid guess can ever win.
-
-**Bug 9 — The score rewards you for guessing wrong.**
+**Bug 8 -- The score rewards you for guessing wrong.**
 In `update_score`, a `"Too High"` outcome returns `current_score + 5` when the attempt number is even, and `current_score - 5` otherwise. A `"Too Low"` outcome always returns `current_score - 5`. So a wrong guess can *earn* points depending on which turn it lands on, the two wrong outcomes are treated inconsistently, and there is no floor, so the score can go negative.
 
-**Bug 10 — Invalid input still costs you an attempt.**
+**Bug 9 -- Invalid input still costs you an attempt.**
 In the `if submit:` block, `st.session_state.attempts += 1` runs *before* `parse_guess` is called. Typing `abc` shows the "That is not a number" error and still burns one of your limited attempts.
 
-**Bug Reproduction Log — Part B**
+**Bug Reproduction Log -- Part B**
 
 | Input Used | Expected Behavior | Actual Behavior | Console Error / Output | Suspected Code Location |
 |---|---|---|---|---|
-| Select "Hard" and check the sidebar range | Range narrower than Normal in difficulty, i.e. harder | Range shown is 1–50, narrower than Normal's 1–100, making Hard easier | none | `app.py`, `get_range_for_difficulty` |
 | Select "Easy" and read the blue banner | "Guess a number between 1 and 20" | "Guess a number between 1 and 100" | none | `app.py`, `st.info(...)` hardcoded string |
-| Start on Normal, get secret 73, switch to Easy | New secret generated within 1–20 | Secret stays 73; no guess in 1–20 can win | none | `app.py`, `if "secret" not in st.session_state:` guard |
-| Wrong guess on attempt 2, then a wrong guess on attempt 3 | Score does not increase for a wrong guess | Attempt 2 adds +5; attempt 3 subtracts −5 | none | `app.py`, `update_score` |
+| Start on Normal, get secret 73, switch to Easy | New secret generated within 1-20 | Secret stays 73; no guess in 1-20 can win | none | `app.py`, `if "secret" not in st.session_state:` guard |
+| Wrong guess on attempt 2, then a wrong guess on attempt 3 | Score does not increase for a wrong guess | Attempt 2 adds +5; attempt 3 subtracts -5 | none | `app.py`, `update_score` |
 | Type `abc` and submit | Error shown, attempt not consumed | Error shown and attempts counter increments | none | `app.py`, `if submit:` (increment before `parse_guess`) |
+
+### The AI claim I rejected: "Hard is easier than Normal"
+
+The fifth issue the assistant raised was that `get_range_for_difficulty` returns `(1, 50)` for Hard -- a narrower range than Normal's `(1, 100)` -- and that this made Hard the easier setting. It sounded right, and I nearly wrote it up as bug number ten.
+
+Then I checked the arithmetic instead of trusting it. Difficulty in a guessing game is not the size of the range on its own; it is the range measured against how many guesses you get. Playing well means halving the remaining numbers each turn, so the guesses needed is how many times you can halve N down to 1:
+
+| Difficulty | Numbers | Guesses needed | Guesses given | Guaranteed win? |
+|---|---|---|---|---|
+| Easy | 20 | 5 | 6 | Yes, one spare |
+| Normal | 100 | 7 | 8 | Yes, one spare |
+| Hard | 50 | 6 | 5 | **No -- one short** |
+
+Hard is the only setting where perfect play still is not enough. It is genuinely the hardest of the three, and the assistant's conclusion was simply wrong -- it had looked at the range and never checked it against the attempt limit. The range progression (20, then 50, then 100) is inconsistent and reads oddly, but an odd-looking number is not a bug.
+
+So I did not fix it. Reverting this was the single most useful decision I made on the project, because a "fix" here would have quietly made Hard *winnable* -- changing the game's design while claiming to repair it, and putting a false bug in my own report. This is the clearest example I have of why the human has to stay in the loop: the AI was fluent, specific and confident, and still wrong, and the only thing that caught it was me doing the maths myself.
+
 
 ---
 
