@@ -89,19 +89,20 @@ def hint_message(outcome):
     return messages.get(outcome, "")
 
 
-def update_score(current_score: int, outcome: str, attempt_number: int):
+def update_score(current_score, outcome, attempt_number):
+    # FIX: three defects lived here. A "Too High" guess ADDED 5 points on
+    # even-numbered attempts, so being wrong could earn you points; the two
+    # wrong outcomes were scored inconsistently ("Too Low" always lost 5); and
+    # there was no floor, so the score could go negative. The win bonus also
+    # used attempt_number + 1 on an already incremented counter, double-
+    # penalising a first-guess win.
     if outcome == "Win":
-        points = 100 - 10 * (attempt_number + 1)
-        if points < 10:
-            points = 10
-        return current_score + points
+        # Winning on attempt 1 is worth the full 100; each extra guess costs 10,
+        # with a floor of 10 so a slow win still scores something.
+        points = 100 - 10 * (attempt_number - 1)
+        return current_score + max(points, 10)
 
-    if outcome == "Too High":
-        if attempt_number % 2 == 0:
-            return current_score + 5
-        return current_score - 5
-
-    if outcome == "Too Low":
-        return current_score - 5
+    if outcome in ("Too High", "Too Low"):
+        return max(current_score - 5, 0)
 
     return current_score
