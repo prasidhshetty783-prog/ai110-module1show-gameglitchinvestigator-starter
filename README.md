@@ -35,7 +35,12 @@ Run the tests with `pytest` from the project root.
 
 ---
 
-## 🐛 The bugs I found
+## 📝 Document Your Experience
+
+This section covers the three things the project asks for: the game's purpose
+(above, under "What the game does"), every bug found, and every fix applied.
+
+### 🐛 The bugs I found
 
 The starter code shipped nine real defects. Full reproduction tables, with
 inputs, expected versus actual behaviour and code locations, are in
@@ -80,7 +85,7 @@ Hard is the only difficulty that gives fewer than that, so it was already the
 hardest. I reverted the change and withdrew the claim. Written up in
 [`reflection.md`](reflection.md) section 2.
 
-## 🔧 The fixes
+### 🔧 The fixes
 
 All game rules moved out of `app.py` into `logic_utils.py` first, as a separate
 commit with no behaviour change, so every later fix reads as a clean diff. That
